@@ -26,7 +26,8 @@ chipDrawer.style.left = "50%";
 chipDrawer.style.transform = "translate(-50%, 0%)";
 chipDrawer.style.display = "flex";
 chipDrawer.style.gap = "4px";
-chipDrawer.style.boxShadow = "0.3em 0.3em 1em rgb(13,13,13, 0.4)";
+chipDrawer.style.backgroundColor = "transparent";
+chipDrawer.style.zIndex = 999999999;
 
 let chipContainer = document.createElement("div");
 chipContainer.style.display = "flex";
@@ -38,19 +39,22 @@ chipDrawerAnchor.id = "chip-drawer-anchor";
 chipDrawerAnchor.style.backgroundColor = ANCHOR_DRAWER_TOGGLER;
 chipDrawerAnchor.style.position = "absolute";
 chipDrawerAnchor.style.transform = "translate(50%, calc(100% + 10px))";
-chipDrawerAnchor.style.zIndex = 100;
+chipDrawerAnchor.style.zIndex = 999999999; /* This zIndex should be the highest among all the other dom elements */
+chipDrawerAnchor.style.width = "50px";
 chipDrawerAnchor.style.bottom = 0;
 chipDrawerAnchor.style.right = "50%";
 chipDrawerAnchor.style.display = "flex";
 chipDrawerAnchor.style.gap = "4px";
 chipDrawerAnchor.ariaLabel = "open-drawer-anchor";
 chipDrawerAnchor.style.padding = "2px 6px 2px 6px";
-chipDrawerAnchor.style.height = "10px";
+chipDrawerAnchor.style.height = "6px";
+chipDrawerAnchor.style.borderRadius = "3px";
+chipDrawerAnchor.style.border = "0px solid black";
 
 const handleDrawerAnchor = () => {
   if (chipDrawerAnchor.getAttribute("aria-label") !== "open-drawer-anchor") {
     chipDrawerAnchor.setAttribute("aria-label", "open-drawer-anchor");
-    chipContainer.style.overflow = "none";
+    chipContainer.style.overflow = "unset";
     chipContainer.style.height = "fit-content";
   } else {
     chipDrawerAnchor.setAttribute("aria-label", "down-drawer-anchor");
@@ -62,6 +66,8 @@ const handleDrawerAnchor = () => {
 chipDrawerAnchor.addEventListener("click", handleDrawerAnchor);
 
 const addStylesToChip = (chip) => {
+  chip.style.boxShadow = "0.3em 0.3em 1em rgb(13,13,13, 0.4)";
+  chip.style.border = "0px solid black";
   chip.style.backgroundColor = BUTTON_BACKGROUND_COLOR;
   chip.style.borderRadius = "8px";
   chip.style.padding = "2px 6px 2px 6px";
@@ -128,6 +134,13 @@ let addButton = document.createElement("button");
 createChip(addButton, "+", () => {
   console.log("TODO: Add button implementation is pending");
 });
+
+// TODO: add button should be in the parent container instead of the chip container
+// let addButton = document.createElement("button");
+// addStylesToChip(addButton);
+// addButton.innerText = "+";
+// addButton.addEventListener("click", (_) => onClick());
+// chipDrawer.appendChild(addButton);
 
 chipDrawer.appendChild(chipContainer);
 chipDrawer.appendChild(chipDrawerAnchor);
