@@ -50,6 +50,8 @@ interface State {
   editBookmark: EditBookmarkState | null;
   editingTagId: string | null;
   newProviderInput: string;
+  // View
+  viewMode: "grid" | "table";
 }
 
 const S: State = {
@@ -68,6 +70,7 @@ const S: State = {
   editBookmark: null,
   editingTagId: null,
   newProviderInput: "",
+  viewMode: "grid",
 };
 
 // ── Computed ─────────────────────────────────────────────
@@ -135,7 +138,13 @@ function renderGrid(): void {
   empty.classList.add("hidden");
   count.textContent = `${filtered.length} bookmark${filtered.length !== 1 ? "s" : ""}`;
 
-  for (const bm of filtered) grid.appendChild(buildCard(bm));
+  if (S.viewMode === "table") {
+    grid.classList.add("db-grid--table");
+    grid.appendChild(buildTable(filtered));
+  } else {
+    grid.classList.remove("db-grid--table");
+    for (const bm of filtered) grid.appendChild(buildCard(bm));
+  }
 }
 
 function buildCard(bm: Bookmark): HTMLElement {
@@ -194,6 +203,101 @@ function buildCard(bm: Bookmark): HTMLElement {
     });
 
   return card;
+}
+
+function buildTable(bookmarks: Bookmark[]): HTMLElement {
+  const table = document.createElement("table");
+  table.className = "db-table";
+  table.innerHTML = `
+    <thead>
+      <tr class="db-table-head">
+        <th class="db-th db-th--title">Title</th>
+        <th class="db-th db-th--type">Type</th>
+        <th class="db-th db-th--tags">Tags</th>
+        <th class="db-th db-th--domain">Domain</th>
+        <th class="db-th db-th--date">Date</th>
+        <th class="db-th db-th--actions"></th>
+      </tr>
+    </thead>
+  `;
+  const tbody = document.createElement("tbody");
+  for (const bm of bookmarks) tbody.appendChild(buildRow(bm));
+  table.appendChild(tbody);
+  return table;
+}
+
+function buildRow(bm: Bookmark): HTMLElement {
+  const tr = document.createElement("tr");
+  tr.className = `db-table-row db-table-row--${bm.type}`;
+
+  const date = new Date(bm.createdAt).toLocaleDateString(undefined, {
+    month: "short", day: "numeric", year: "numeric",
+  });
+
+  // Title cell
+  const tdTitle = document.createElement("td");
+  tdTitle.className = "db-td db-td--title";
+  const link = document.createElement("a");
+  link.className = "db-row-title";
+  link.href = bm.url;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.textContent = bm.title || bm.url;
+  link.title = bm.title || bm.url;
+  tdTitle.appendChild(link);
+
+  // Type cell
+  const typeCls = bm.type === "ai-chat" ? "db-type-badge--ai" : "db-type-badge--site";
+  const typeLabel = bm.type === "ai-chat" ? "AI Chat" : "Site";
+  const tdType = document.createElement("td");
+  tdType.className = "db-td db-td--type";
+  tdType.innerHTML = `<span class="db-type-badge ${typeCls}">${typeLabel}</span>`;
+
+  // Tags cell — first 3 chips + overflow count
+  const tdTags = document.createElement("td");
+  tdTags.className = "db-td db-td--tags";
+  const visibleTags = bm.tags.slice(0, 3);
+  const overflow = bm.tags.length - visibleTags.length;
+  tdTags.innerHTML = visibleTags.map((tid) => {
+    const t = tagById(tid);
+    if (!t) return "";
+    return `<span class="db-card-tag" style="background:${t.color}" title="${esc(t.label)}">${t.emoji ? t.emoji + " " : ""}${esc(t.label)}</span>`;
+  }).filter(Boolean).join("") +
+  (overflow > 0 ? `<span class="db-row-tag-overflow">+${overflow}</span>` : "");
+
+  // Domain cell
+  const tdDomain = document.createElement("td");
+  tdDomain.className = "db-td db-td--domain";
+  tdDomain.textContent = bm.domain;
+
+  // Date cell
+  const tdDate = document.createElement("td");
+  tdDate.className = "db-td db-td--date";
+  tdDate.textContent = date;
+
+  // Actions cell
+  const tdActions = document.createElement("td");
+  tdActions.className = "db-td db-td--actions";
+  const editBtn = document.createElement("button");
+  editBtn.className = "db-card-btn db-card-edit-btn";
+  editBtn.title = "Edit";
+  editBtn.textContent = "✏";
+  editBtn.addEventListener("click", (e) => { e.preventDefault(); openEditModal(bm); });
+  const delBtn = document.createElement("button");
+  delBtn.className = "db-card-btn db-card-delete-btn";
+  delBtn.title = "Delete";
+  delBtn.textContent = "✕";
+  delBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (!confirm(`Delete "${bm.title || bm.url}"?`)) return;
+    await db.deleteBookmark(bm.id);
+    await refresh();
+  });
+  tdActions.appendChild(editBtn);
+  tdActions.appendChild(delBtn);
+
+  tr.append(tdTitle, tdType, tdTags, tdDomain, tdDate, tdActions);
+  return tr;
 }
 
 // ── Tag filter bar ────────────────────────────────────────
@@ -402,6 +506,11 @@ function buildSettingsContent(): HTMLElement {
   addRow.appendChild(addBtn);
   provSec.appendChild(addRow);
   wrap.appendChild(provSec);
+
+  // Keyboard Shortcut
+  const shortcutSec = makeSection("Keyboard Shortcut");
+  shortcutSec.appendChild(buildShortcutRow());
+  wrap.appendChild(shortcutSec);
 
   // Links to sub-panels
   const manageSec = makeSection("Manage");
@@ -1090,6 +1199,127 @@ function esc(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// ── Keyboard shortcut recorder ───────────────────────────
+
+function buildKeyString(e: KeyboardEvent): string {
+  if (["Control", "Alt", "Meta", "Shift"].includes(e.key)) return "";
+  const parts: string[] = [];
+  if (e.ctrlKey) parts.push("ctrl");
+  if (e.altKey) parts.push("alt");
+  if (e.metaKey) parts.push("meta");
+  if (e.shiftKey) parts.push("shift");
+  parts.push(e.key.toLowerCase());
+  return parts.join("+");
+}
+
+function formatKey(key: string): string {
+  return key
+    .split("+")
+    .map((k) => k.charAt(0).toUpperCase() + k.slice(1))
+    .join("+");
+}
+
+function buildShortcutRow(): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "db-shortcut-row";
+
+  let pendingKey: string | null = null;
+  let keyListener: ((e: KeyboardEvent) => void) | null = null;
+
+  const display = document.createElement("span");
+  display.className = "db-shortcut-display";
+
+  const recordBtn = document.createElement("button");
+  recordBtn.className = "db-btn db-btn--secondary db-btn--sm";
+
+  const clearBtn = document.createElement("button");
+  clearBtn.className = "db-btn db-btn--ghost db-btn--sm";
+  clearBtn.textContent = "Clear";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "db-btn db-btn--primary db-btn--sm";
+  saveBtn.textContent = "Save";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "db-btn db-btn--ghost db-btn--sm";
+  cancelBtn.textContent = "Cancel";
+
+  function refresh() {
+    const key = S.settings.cardToggleKey;
+    display.textContent = key ? formatKey(key) : "Not set";
+    display.className = `db-shortcut-display${key ? "" : " db-shortcut-display--empty"}`;
+    recordBtn.textContent = key ? "Change" : "Set shortcut";
+    row.classList.remove("db-shortcut-row--recording");
+    saveBtn.style.display = "none";
+    cancelBtn.style.display = "none";
+    recordBtn.style.display = "";
+    clearBtn.style.display = key ? "" : "none";
+  }
+
+  function startRecording() {
+    pendingKey = null;
+    display.textContent = "Press any key combo…";
+    display.className = "db-shortcut-display db-shortcut-display--recording";
+    row.classList.add("db-shortcut-row--recording");
+    recordBtn.style.display = "none";
+    clearBtn.style.display = "none";
+    saveBtn.style.display = "";
+    saveBtn.disabled = true;
+    cancelBtn.style.display = "";
+
+    keyListener = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const key = buildKeyString(e);
+      if (!key) return; // modifier-only press
+      pendingKey = key;
+      display.textContent = formatKey(key);
+      saveBtn.disabled = false;
+    };
+    window.addEventListener("keydown", keyListener, true);
+  }
+
+  function stopRecording() {
+    if (keyListener) {
+      window.removeEventListener("keydown", keyListener, true);
+      keyListener = null;
+    }
+    refresh();
+  }
+
+  recordBtn.addEventListener("click", startRecording);
+  cancelBtn.addEventListener("click", () => { pendingKey = null; stopRecording(); });
+
+  saveBtn.addEventListener("click", async () => {
+    if (!pendingKey) return;
+    S.settings = await db.updateSettings({ cardToggleKey: pendingKey });
+    chrome.runtime.sendMessage({
+      type: "BROADCAST_TO_TABS",
+      payload: { type: "SHORTCUT_UPDATED", key: pendingKey },
+    });
+    pendingKey = null;
+    stopRecording();
+  });
+
+  clearBtn.addEventListener("click", async () => {
+    S.settings = await db.updateSettings({ cardToggleKey: null });
+    chrome.runtime.sendMessage({
+      type: "BROADCAST_TO_TABS",
+      payload: { type: "SHORTCUT_UPDATED", key: null },
+    });
+    refresh();
+  });
+
+  refresh();
+
+  row.appendChild(display);
+  row.appendChild(recordBtn);
+  row.appendChild(saveBtn);
+  row.appendChild(cancelBtn);
+  row.appendChild(clearBtn);
+  return row;
+}
+
 function makeSection(title: string): HTMLElement {
   const sec = document.createElement("div");
   sec.className = "db-settings-section";
@@ -1200,6 +1430,10 @@ function buildShell(): void {
           <option value="domain:asc">Domain</option>
         </select>
       </div>
+      <div class="db-view-toggle" id="db-view-toggle">
+        <button class="db-view-btn db-view-btn--active" data-view="grid" title="Card view">⊞</button>
+        <button class="db-view-btn" data-view="table" title="Table view">☰</button>
+      </div>
     </div>
 
     <div class="db-tagfilterbar">
@@ -1302,6 +1536,18 @@ function wireEvents(): void {
     setTimeout(() => el("db-filter-tag-picker")!.classList.remove("open"), 150);
   });
 
+  // View toggle
+  document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      S.viewMode = btn.dataset.view as "grid" | "table";
+      localStorage.setItem("db-view-mode", S.viewMode);
+      document.querySelectorAll("[data-view]").forEach((b) =>
+        b.classList.toggle("db-view-btn--active", b === btn)
+      );
+      renderGrid();
+    });
+  });
+
   // Settings button
   el("db-settings-btn")!.addEventListener("click", () => {
     S.panel = S.panel === "none" ? "settings" : "none";
@@ -1321,14 +1567,19 @@ function wireEvents(): void {
     renderPanel();
   });
 
-  // Click outside panel to close
+  // Click outside panel to close.
+  // Use composedPath() instead of e.target so that clicks on buttons that
+  // trigger renderPanel() (which does body.innerHTML = "" and detaches the
+  // button from the DOM before the event bubbles here) are still recognised
+  // as "inside the panel" and don't immediately close it again.
   document.addEventListener("click", (e) => {
     const panel = el("db-panel")!;
     const settingsBtn = el("db-settings-btn")!;
+    const path = e.composedPath();
     if (
       S.panel !== "none" &&
-      !panel.contains(e.target as Node) &&
-      !settingsBtn.contains(e.target as Node)
+      !path.includes(panel) &&
+      !path.includes(settingsBtn)
     ) {
       S.panel = "none";
       renderPanel();
@@ -1360,6 +1611,16 @@ async function init(): Promise<void> {
   wireEvents();
   updateSortSelect();
   updateTagModeRadios();
+
+  // Restore persisted view mode before first render
+  const savedView = localStorage.getItem("db-view-mode");
+  if (savedView === "table" || savedView === "grid") {
+    S.viewMode = savedView;
+    document.querySelectorAll<HTMLElement>("[data-view]").forEach((b) =>
+      b.classList.toggle("db-view-btn--active", b.dataset.view === savedView)
+    );
+  }
+
   await loadData();
   renderGrid();
   renderTagFilterChips();

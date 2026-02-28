@@ -149,6 +149,33 @@ html, body {
 }
 .db-sort-select option { background: #27272a; }
 
+.db-view-toggle {
+  display: flex;
+  gap: 2px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+.db-view-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.12s;
+}
+.db-view-btn:hover { color: var(--text); background: var(--bg-hover); }
+.db-view-btn--active {
+  background: var(--surface2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ── Tag filter bar ──────────────────────────────────────── */
 .db-tagfilterbar {
   display: flex;
@@ -416,6 +443,85 @@ html, body {
   color: #fff;
 }
 .db-card-no-tags { font-size: 10px; color: var(--text2); font-style: italic; }
+
+/* ── Table view ──────────────────────────────────────────── */
+.db-grid--table {
+  display: block;
+  max-width: 100%;
+}
+
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.db-th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text2);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.db-table-row {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.db-table-row:hover { background: var(--surface); }
+.db-table-row:hover .db-card-btn { opacity: 1; }
+
+.db-table-row--ai-chat .db-td--title { border-left: 3px solid rgba(147,197,253,0.4); }
+.db-table-row--site    .db-td--title { border-left: 3px solid rgba(134,239,172,0.3); }
+
+.db-td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+.db-td--title { max-width: 320px; }
+.db-row-title {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: none;
+}
+.db-row-title:hover { color: #93c5fd; text-decoration: underline; }
+
+.db-td--type  { width: 72px; }
+.db-td--tags  { max-width: 200px; }
+.db-td--domain {
+  width: 140px;
+  color: var(--text2);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.db-td--date  { width: 100px; color: var(--text2); font-size: 12px; white-space: nowrap; }
+.db-td--actions { width: 56px; text-align: right; }
+
+.db-table-row .db-card-btn { opacity: 0; transition: opacity 0.15s; }
+
+.db-row-tag-overflow {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  color: var(--text2);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
 
 /* Empty state */
 .db-empty {
@@ -791,6 +897,52 @@ html, body {
 .db-btn--ghost:hover { color: var(--text); background: var(--surface); }
 .db-btn--sm { height: 26px; padding: 0 8px; font-size: 11px; }
 .db-btn--full { width: 100%; }
+
+/* ── Keyboard shortcut recorder ─────────────────────────── */
+.db-shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+
+.db-shortcut-display {
+  flex: 1;
+  min-width: 80px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--accent);
+  background: rgba(74, 144, 217, 0.1);
+  border: 1px solid rgba(74, 144, 217, 0.25);
+  border-radius: 6px;
+  padding: 4px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-shortcut-display--empty {
+  color: var(--text2);
+  background: var(--surface);
+  border-color: var(--border);
+  font-weight: 400;
+  font-style: italic;
+  font-family: inherit;
+}
+
+.db-shortcut-display--recording {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.35);
+  animation: db-shortcut-pulse 1s ease-in-out infinite;
+}
+
+@keyframes db-shortcut-pulse {
+  0%, 100% { border-color: rgba(251, 191, 36, 0.35); }
+  50%       { border-color: rgba(251, 191, 36, 0.7); }
+}
 
 /* Icon button */
 .db-icon-btn {
