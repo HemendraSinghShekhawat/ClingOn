@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "ClingOn",
+  "version": "2.0",
+  "description": "Tag-based bookmark manager for AI/LLM chat conversations",
+  "permissions": ["activeTab", "storage", "tabs"],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "toggle-sidebar": {
+      "suggested_key": {
+        "default": "Alt+N"
+      },
+      "description": "Toggle ClingOn sidebar"
+    }
+  }
+}
