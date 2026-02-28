@@ -403,7 +403,7 @@ function renderSearchResults(): void {
 
   const section = buildSection("Results", () => {
     const row = document.createElement("div");
-    row.className = "co-section-row";
+    row.className = "co-section-row co-section-row--wrap";
 
     for (const tag of matches.slice(0, 12)) {
       row.appendChild(createTagChip(tag, () => handleTagToggle(tag.id)));
